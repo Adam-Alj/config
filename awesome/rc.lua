@@ -2,6 +2,7 @@
 -- found (e.g. lgi). If LuaRocks is not installed, do nothing.
 pcall(require, "luarocks.loader")
 
+local tempTest = require("layouts.custom");
 -- Standard awesome library
 local gears = require("gears")
 local awful = require("awful")
@@ -167,21 +168,32 @@ local horizontal_layouts = {
     awful.layout.suit.magnifier,
     awful.layout.suit.corner.nw,
     awful.layout.suit.corner.ne,
+    -- tempTest
 }
 
 local vertical_layouts = {
     awful.layout.suit.tile.bottom,
+    awful.layout.suit.tile.top,
 }
+
+local function isHorizontalScreen(s)
+    return s.geometry.width >= s.geometry.height
+end
+
+local codeTag = "code"
+local terminalTag = "term"
+local browserTag = "browser"
+local discordTag = "discord"
 
 awful.screen.connect_for_each_screen(function(s)
     -- Wallpaper
     set_wallpaper(s)
 
     -- Each screen has its own tag table.
-    if s.geometry.width >= s.geometry.height then
-        awful.tag({ "1", "2", "3", "4", "5"}, s, horizontal_layouts)
+    if isHorizontalScreen(s) then
+        awful.tag({ codeTag, browserTag, terminalTag }, s, horizontal_layouts)
     else
-        awful.tag({ "1", "2", "3", "4" }, s, vertical_layouts)
+        awful.tag({ discordTag, browserTag }, s, vertical_layouts)
     end
 
     -- Create a promptbox for each screen
@@ -307,12 +319,20 @@ globalkeys = gears.table.join(
     awful.key({ modkey, "Control" }, "l",     function () awful.tag.incncol(-1, nil, true)    end,
               {description = "decrease the number of columns", group = "layout"}),
 
+    -- handle layout change
+    -- we want all tags to share the same layouts and increment 
     awful.key({ modkey,           }, "space", function () 
         local screen = awful.screen.focused()
         if screen.geometry.width >= screen.geometry.height then
             awful.layout.inc(1, screen, horizontal_layouts)                
         else
             awful.layout.inc(1, screen, vertical_layouts)                
+        end
+
+        local currentLayoutFn = awful.layout.get(screen)
+
+        for _, tag in pairs(screen.tags) do
+            tag.layout = currentLayoutFn
         end
     end,
     {description = "select next", group = "layout"}),
@@ -324,7 +344,14 @@ globalkeys = gears.table.join(
         else
             awful.layout.inc(-1, screen, vertical_layouts)                
         end
+
+        local currentLayoutFn = awful.layout.get(screen)
+
+        for _, tag in pairs(screen.tags) do
+            tag.layout = currentLayoutFn
+        end
     end,
+
     {description = "select previous", group = "layout"}),
 
     awful.key({ modkey, "Control" }, "n",
@@ -365,7 +392,7 @@ clientkeys = gears.table.join(
             c:raise()
         end,
         {description = "toggle fullscreen", group = "client"}),
-    awful.key({ modkey, "Shift"   }, "c",      function (c) c:kill()                         end,
+    awful.key({ modkey   }, "q",      function (c) c:kill()                         end,
               {description = "close", group = "client"}),
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ,
               {description = "toggle floating", group = "client"}),
@@ -408,6 +435,7 @@ clientkeys = gears.table.join(
 for i = 1, 9 do
     globalkeys = gears.table.join(globalkeys,
         -- View tag only.
+        --[[
         awful.key({ modkey }, "#" .. i + 9,
                   function ()
                         local screen = awful.screen.focused()
@@ -417,8 +445,9 @@ for i = 1, 9 do
                         end
                   end,
                   {description = "view tag #"..i, group = "tag"}),
+        ]]--
         -- Toggle tag display.
-        awful.key({ modkey, "Control" }, "#" .. i + 9,
+        awful.key({ modkey  }, "#" .. i + 9,
                   function ()
                       local screen = awful.screen.focused()
                       local tag = screen.tags[i]
@@ -428,6 +457,7 @@ for i = 1, 9 do
                   end,
                   {description = "toggle tag #" .. i, group = "tag"}),
         -- Move client to tag.
+        --[[
         awful.key({ modkey, "Shift" }, "#" .. i + 9,
                   function ()
                       if client.focus then
@@ -438,6 +468,7 @@ for i = 1, 9 do
                      end
                   end,
                   {description = "move focused client to tag #"..i, group = "tag"}),
+                  ]]--
         -- Toggle tag on focused client.
         awful.key({ modkey, "Control", "Shift" }, "#" .. i + 9,
                   function ()
@@ -485,6 +516,31 @@ awful.rules.rules = {
                      placement = awful.placement.no_overlap+awful.placement.no_offscreen
      }
     },
+
+    { rule = { class = "Code" },
+      properties = { 
+        tag = codeTag
+     }
+    },
+
+    { rule = { class = "kitty" },
+      properties = { 
+        tag = terminalTag 
+     }
+    },
+
+    { rule = { class = "Google-chrome" },
+      properties = { 
+        tag = browserTag 
+     }
+    },
+
+    { rule = { class = "discord" },
+      properties = { 
+        tag = discordTag 
+     }
+    },
+
 
     -- Floating clients.
     { rule_any = {
